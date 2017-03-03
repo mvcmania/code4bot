@@ -206,7 +206,6 @@ const searchProductOnDemandWare=()=> {
         }else{
           console.info('No product found!');
         }
-        
       }
   });
 
