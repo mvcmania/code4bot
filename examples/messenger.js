@@ -335,7 +335,7 @@ const prepareListTemplate = (hits)=>{
                         {
                             "title": "Add to Cart",
                             "type": "web_url",
-                            "url": "",
+                            "url": "https://osfglobalservices26-alliance-prtnr-eu03-dw.demandware.net",
                             "messenger_extensions": true,
                             "webview_height_ratio": "tall",
                             "fallback_url": ""                        
