@@ -35,19 +35,22 @@ const actions = {
     if(quickreplies){
         text = setQuickReplies(quickreplies,text);
     }
-    if(searchState){
-      searchProductOnDemandWare('recepientId');
-    }
+   
     console.log('request',JSON.stringify(request));
     console.log('response',JSON.stringify(response));
     //console.log(typeof(text)=='Object');
   },
   // You should implement your custom actions here
   // See https://wit.ai/docs/quickstart
-  setIntentAndCategory(context){
+  setIntentAndCategory(context,entities){
+
     console.log('setIntentAndCategory',JSON.stringify(context));
    
    setEntityValues(context,true);
+   console.log('Afte setIntentAndCategory',JSON.stringify(context));
+   return new Promise(function(resolve,reject){
+      return resolve(context);
+   });
     /*var intentContext = context;
     //intents array
     var intents = intentContext.entities.intent;
@@ -63,12 +66,20 @@ const actions = {
     console.log('Set gender type entity: ',JSON.stringify(entities));
   },
   productSearch(context,entities){
-    searchState =  true;
     console.log('Product Search : ',JSON.stringify(context));
     console.log('Product Search entity: ',JSON.stringify(entities));
-    setEntityValues(context,false);
+    //setEntityValues(context,false);
     console.log('Context Map: ',JSON.stringify(contextMap));
-    
+    //var recipientId = sessions[context.sessionId].fbid;
+    //fbMessage(recipientId,'TEST message');
+   /* searchProductOnDemandWare()
+    .then(function(resp){
+        console.log('resp',resp);
+    })
+    .catch(function(err){
+        console.log('err',err);
+    });
+    */
     
   }
 };
@@ -78,7 +89,7 @@ const actions = {
  * @param {*} context 
  * @param {*} reset 
  */
-const searchProductOnDemandWare=(recepId)=> {
+var searchProductOnDemandWare=()=> {
   var entireURL = siteHost + siteSuffix;
   var productSearchDirectory = '/product_search';
   var q = contextMap['search-query']!="undefined" ? contextMap['search-query'] : '' ;
@@ -90,26 +101,39 @@ const searchProductOnDemandWare=(recepId)=> {
   
   entireURL = (entireURL+'?client_id=' + client_id + '&refine_1=' + refine_1 + '&q='+ q + '&expand=' + expand + '&count=' + count + '&start=' + start + '&sort=' + sort);
   console.log(entireURL);
-  request(entireURL,
-  function(error,response,body){
-      if(!error  && response.statusCode == 200){
-        var bodyItem = JSON.parse(body);
-        var template =  prepareListTemplate(bodyItem.hits);
-        console.log(recepId);
-        console.log(JSON.stringify(template));
-      }
-  });
+  return new Promise(function(resolve,reject){
+      request(entireURL,
+      function(error,response,body){
+         console.log('error',error);
+         console.log('response.statusCode',response.statusCode);
+         console.log('body',body);
+          if(!error  && response.statusCode == 200){
+            var bodyItem = JSON.parse(body);
+            var template = '';
+            if(typeof(bodyItem.hits)!="undefined"){
+               template =  prepareListTemplate(bodyItem.hits);
+            }else{
+              template = 'Product not found!';
+            }
+            resolve(template);
+          }else{
+            reject(new Error('Failed to load page, status code: ' + response.statusCode));
+            
+          }
+      })
+  })
+  
 
 }
 //Update entity values 
 const setEntityValues =(context,reset) =>{
-  
   if(reset == true){
        contextMap = resetContextMap();
   }
    Object.keys(context.entities).forEach(function(key){
+     console.log(key);
         var tempKey = key.replace(/_/g,'-');
-        contextMap[tempKey] = context.entities[key][0].value;
+        context[tempKey] = context.entities[key][0].value;
     });
 }
 const resetContextMap=()=>{
@@ -211,7 +235,7 @@ const prepareListTemplate = (hits)=>{
                         {
                             "title": "Add to Cart",
                             "type": "web_url",
-                            "url": "",
+                            "url": "https://google.com",
                             "messenger_extensions": true,
                             "webview_height_ratio": "tall",
                             "fallback_url": ""                        
