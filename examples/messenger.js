@@ -133,29 +133,18 @@ const actions = {
       if(quickreplies){
          text = setQuickReplies(quickreplies,text);
       }
-      if(searchState){
-          return searchProductOnDemandWare(recipientId)
-          .then(() => null)
-          .catch((err) => {
-            console.error(
-              'Oops! An error occurred while forwarding the response to',
-              recipientId,
-              ':',
-              err.stack || err
-            );
-          });
-      }
-      console.log(text);
-      return fbMessage(recipientId, text)
-      .then(() => null)
-      .catch((err) => {
-        console.error(
-          'Oops! An error occurred while forwarding the response to',
-          recipientId,
-          ':',
-          err.stack || err
-        );
-      });
+      
+        console.log(text);
+        return fbMessage(recipientId, text)
+        .then(() => null)
+        .catch((err) => {
+          console.error(
+            'Oops! An error occurred while forwarding the response to',
+            recipientId,
+            ':',
+            err.stack || err
+          );
+        });
     } else {
       console.error('Oops! Couldn\'t find user for session:', sessionId);
       // Giving the wheel back to our bot
@@ -166,8 +155,13 @@ const actions = {
   // See https://wit.ai/docs/quickstart
   setIntentAndCategory(context){
     console.log('setIntentAndCategory',JSON.stringify(context));
-   
+  
    setEntityValues(context,true);
+   
+   return new Promise(function(resolve,reject){
+     console.log('context',context);
+      resolve(context);
+   })
     /*var intentContext = context;
     //intents array
     var intents = intentContext.entities.intent;
@@ -185,9 +179,16 @@ const actions = {
   productSearch(context,entities){
     searchState = true;
     console.log('Product Search : ',JSON.stringify(context));
-    console.log('Product Search entity: ',JSON.stringify(entities));
-    setEntityValues(context,false);
+    /*setEntityValues(context,false);
     console.log('Context Map: ',JSON.stringify(contextMap));
+    var recipientId = sessions[context.sessionId].fbid;
+    searchProductOnDemandWare()
+    .then(function (fbResponse) {
+	 			fbMessage(recipientId,fbResponse);
+		})
+ 		.catch(function (err) {
+					console.log(err)
+ 		});*/
     
   }
 };
@@ -198,7 +199,7 @@ const actions = {
  * @param {*} context 
  * @param {*} reset 
  */
-const searchProductOnDemandWare=(recipientId)=> {
+var searchProductOnDemandWare=()=> {
   var entireURL = siteHost + siteSuffix;
   var productSearchDirectory = '/product_search';
   var q = contextMap['search-query']!="undefined" ? contextMap['search-query'] : '' ;
@@ -210,30 +211,35 @@ const searchProductOnDemandWare=(recipientId)=> {
   
   entireURL = (entireURL+'?client_id=' + client_id + '&refine_1=' + refine_1 + '&q='+ q + '&expand=' + expand + '&count=' + count + '&start=' + start + '&sort=' + sort);
   console.log(entireURL);
-  return request(entireURL,
-  function(error,response,body){
-      if(!error  && response.statusCode == 200){
-        var bodyItem = JSON.parse(body);
-        if(typeof(bodyItem.hits)!="undefined"){
-          var template =  prepareListTemplate(bodyItem.hits);
-          console.log('recepient id',recipientId);
-          return fbMessage(recipientId,template);
-        }else{
-          return fbMessage(recipientId,'Product not found!');
-        }
-      }
-  });
+  return new Promise(function(resolve,reject){
+      request(entireURL,
+      function(error,response,body){
+          if(!error  && response.statusCode == 200){
+            var bodyItem = JSON.parse(body);
+            var template = null;
+            if(typeof(bodyItem.hits)!="undefined"){
+              template =  prepareListTemplate(bodyItem.hits);
+            }else{
+              template = 'Product not found!';
+            }
+            resolve(template);
+          }else{
+            reject(new Error('Failed to load page, status code: ' + response.statusCode));
+          }
+      })
+  })
+  
 
 }
 //Update entity values 
 const setEntityValues =(context,reset) =>{
   
-  if(reset == true){
+ /* if(reset == true){
        contextMap = resetContextMap();
-  }
+  }*/
    Object.keys(context.entities).forEach(function(key){
         var tempKey = key.replace(/_/g,'-');
-        contextMap[tempKey] = context.entities[key][0].value;
+        context[tempKey] = context.entities[key][0].value;
     });
 }
 const resetContextMap=()=>{
@@ -465,6 +471,7 @@ app.post('/webhook', (req, res) => {
           }
         } else {
           console.log('received event', JSON.stringify(event));
+          fbMessage(event.sender.id, 'Welcome to the OSF DemanWare Store! How can i help you!');
         }
       });
     });
