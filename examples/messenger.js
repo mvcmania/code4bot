@@ -183,6 +183,7 @@ const actions = {
     console.log('Set gender type entity: ',JSON.stringify(entities));
   },
   productSearch(context,entities){
+    searchState = true;
     console.log('Product Search : ',JSON.stringify(context));
     console.log('Product Search entity: ',JSON.stringify(entities));
     setEntityValues(context,false);
