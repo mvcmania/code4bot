@@ -435,6 +435,7 @@ app.post('/webhook', (req, res) => {
             fbMessage(sender, 'Sorry I can only process text messages for now.')
             .catch(console.error);
           } else if (text) {
+            console.log('fb text',text);
             // We received a text message
 
             // Let's forward the message to the Wit.ai Bot Engine
