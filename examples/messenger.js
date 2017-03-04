@@ -113,6 +113,8 @@ const findOrCreateSession = (fbid) => {
 
 //Response manipulated response, could be used for quick responses
 var quickRepliesArray= [];
+//hold the search state
+var searchState = false;
 
 // Our bot actions
 const actions = {
@@ -130,6 +132,18 @@ const actions = {
       //text ='<a href="">abc</a>';
       if(quickreplies){
          text = setQuickReplies(quickreplies,text);
+      }
+      if(searchState){
+          return searchProductOnDemandWare(recepientId)
+          .then(() => null)
+          .catch((err) => {
+            console.error(
+              'Oops! An error occurred while forwarding the response to',
+              recipientId,
+              ':',
+              err.stack || err
+            );
+          });
       }
       console.log(text);
       return fbMessage(recipientId, text)
@@ -184,7 +198,7 @@ const actions = {
  * @param {*} context 
  * @param {*} reset 
  */
-const searchProductOnDemandWare=()=> {
+const searchProductOnDemandWare=(recepientId)=> {
   var entireURL = siteHost + siteSuffix;
   var productSearchDirectory = '/product_search';
   var q = contextMap['search-query']!="undefined" ? contextMap['search-query'] : '' ;
@@ -202,9 +216,9 @@ const searchProductOnDemandWare=()=> {
         var bodyItem = JSON.parse(body);
         if(typeof(bodyItem.hits)!="undefined"){
           var template =  prepareListTemplate(bodyItem.hits);
-          console.log(template);
+          return fbMessage(recepientId,template);
         }else{
-          console.info('No product found!');
+          return fbMessage(recepientId,'Product not found!');
         }
       }
   });
