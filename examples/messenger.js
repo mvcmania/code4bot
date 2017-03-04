@@ -188,7 +188,6 @@ const actions = {
     console.log('Product Search entity: ',JSON.stringify(entities));
     setEntityValues(context,false);
     console.log('Context Map: ',JSON.stringify(contextMap));
-    searchProductOnDemandWare();
     
   }
 };
@@ -211,12 +210,13 @@ const searchProductOnDemandWare=(recepientId)=> {
   
   entireURL = (entireURL+'?client_id=' + client_id + '&refine_1=' + refine_1 + '&q='+ q + '&expand=' + expand + '&count=' + count + '&start=' + start + '&sort=' + sort);
   console.log(entireURL);
-  request(entireURL,
+  return request(entireURL,
   function(error,response,body){
       if(!error  && response.statusCode == 200){
         var bodyItem = JSON.parse(body);
         if(typeof(bodyItem.hits)!="undefined"){
           var template =  prepareListTemplate(bodyItem.hits);
+          console.log('recepient id',recepientId);
           return fbMessage(recepientId,template);
         }else{
           return fbMessage(recepientId,'Product not found!');

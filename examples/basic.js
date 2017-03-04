@@ -23,6 +23,7 @@ const accessToken = (() => {
   }
   return process.argv[2];
 })();
+var searchState = false;
 const actions = {
   send(request, response) {
     const {sessionId, context, entities} = request;
@@ -33,6 +34,9 @@ const actions = {
     console.log(quickreplies);*/
     if(quickreplies){
         text = setQuickReplies(quickreplies,text);
+    }
+    if(searchState){
+      searchProductOnDemandWare('recepientId');
     }
     console.log('request',JSON.stringify(request));
     console.log('response',JSON.stringify(response));
@@ -59,11 +63,12 @@ const actions = {
     console.log('Set gender type entity: ',JSON.stringify(entities));
   },
   productSearch(context,entities){
+    searchState =  true;
     console.log('Product Search : ',JSON.stringify(context));
     console.log('Product Search entity: ',JSON.stringify(entities));
     setEntityValues(context,false);
     console.log('Context Map: ',JSON.stringify(contextMap));
-    searchProductOnDemandWare();
+    
     
   }
 };
@@ -73,7 +78,7 @@ const actions = {
  * @param {*} context 
  * @param {*} reset 
  */
-const searchProductOnDemandWare=()=> {
+const searchProductOnDemandWare=(recepId)=> {
   var entireURL = siteHost + siteSuffix;
   var productSearchDirectory = '/product_search';
   var q = contextMap['search-query']!="undefined" ? contextMap['search-query'] : '' ;
@@ -90,6 +95,7 @@ const searchProductOnDemandWare=()=> {
       if(!error  && response.statusCode == 200){
         var bodyItem = JSON.parse(body);
         var template =  prepareListTemplate(bodyItem.hits);
+        console.log(recepId);
         console.log(JSON.stringify(template));
       }
   });
