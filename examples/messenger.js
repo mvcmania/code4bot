@@ -134,7 +134,7 @@ const actions = {
          text = setQuickReplies(quickreplies,text);
       }
       if(searchState){
-          return searchProductOnDemandWare(recepientId)
+          return searchProductOnDemandWare(recipientId)
           .then(() => null)
           .catch((err) => {
             console.error(
@@ -198,7 +198,7 @@ const actions = {
  * @param {*} context 
  * @param {*} reset 
  */
-const searchProductOnDemandWare=(recepientId)=> {
+const searchProductOnDemandWare=(recipientId)=> {
   var entireURL = siteHost + siteSuffix;
   var productSearchDirectory = '/product_search';
   var q = contextMap['search-query']!="undefined" ? contextMap['search-query'] : '' ;
@@ -216,10 +216,10 @@ const searchProductOnDemandWare=(recepientId)=> {
         var bodyItem = JSON.parse(body);
         if(typeof(bodyItem.hits)!="undefined"){
           var template =  prepareListTemplate(bodyItem.hits);
-          console.log('recepient id',recepientId);
-          return fbMessage(recepientId,template);
+          console.log('recepient id',recipientId);
+          return fbMessage(recipientId,template);
         }else{
-          return fbMessage(recepientId,'Product not found!');
+          return fbMessage(recipientId,'Product not found!');
         }
       }
   });
