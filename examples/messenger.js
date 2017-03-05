@@ -51,7 +51,7 @@ const FB_APP_SECRET = process.env.FB_APP_SECRET;
 if (!FB_APP_SECRET) { throw new Error('missing FB_APP_SECRET') }
 
 let FB_VERIFY_TOKEN = null;
-FB_VERIFY_TOKEN = process.env.FB_VERIFY_TOKEN;
+FB_VERIFY_TOKEN = 'code4botsecret';//process.env.FB_VERIFY_TOKEN;
 /*crypto.randomBytes(8, (err, buff) => {
   if (err) throw err;
   FB_VERIFY_TOKEN = buff.toString('hex');
@@ -113,6 +113,8 @@ const findOrCreateSession = (fbid) => {
 
 //Response manipulated response, could be used for quick responses
 var quickRepliesArray= [];
+//hold the search state
+var searchState = false;
 
 // Our bot actions
 const actions = {
@@ -131,17 +133,18 @@ const actions = {
       if(quickreplies){
          text = setQuickReplies(quickreplies,text);
       }
-      console.log(text);
-      return fbMessage(recipientId, text)
-      .then(() => null)
-      .catch((err) => {
-        console.error(
-          'Oops! An error occurred while forwarding the response to',
-          recipientId,
-          ':',
-          err.stack || err
-        );
-      });
+      
+        console.log(text);
+        return fbMessage(recipientId, text)
+        .then(() => null)
+        .catch((err) => {
+          console.error(
+            'Oops! An error occurred while forwarding the response to',
+            recipientId,
+            ':',
+            err.stack || err
+          );
+        });
     } else {
       console.error('Oops! Couldn\'t find user for session:', sessionId);
       // Giving the wheel back to our bot
@@ -169,11 +172,24 @@ const actions = {
     console.log('Set gender type entity: ',JSON.stringify(entities));
   },
   productSearch(context,entities){
+    searchState = true;
     console.log('Product Search : ',JSON.stringify(context));
     console.log('Product Search entity: ',JSON.stringify(entities));
     setEntityValues(context,false);
     console.log('Context Map: ',JSON.stringify(contextMap));
-    searchProductOnDemandWare();
+    var recipientId = sessions[context.sessionId].fbid;
+    searchProductOnDemandWare()
+    .then(function (fbResponse) {
+        searchState = false;
+        console.log('recipientId',recipientId);
+        console.log('fbResponse',fbResponse);
+	 			fbMessage(recipientId,fbResponse);
+		})
+ 		.catch(function (err) {
+       searchState = false;
+       console.log('err',err);
+					console.log(err)
+ 		});
     
   }
 };
@@ -184,7 +200,7 @@ const actions = {
  * @param {*} context 
  * @param {*} reset 
  */
-const searchProductOnDemandWare=()=> {
+var searchProductOnDemandWare=()=> {
   var entireURL = siteHost + siteSuffix;
   var productSearchDirectory = '/product_search';
   var q = contextMap['search-query']!="undefined" ? contextMap['search-query'] : '' ;
@@ -196,18 +212,27 @@ const searchProductOnDemandWare=()=> {
   
   entireURL = (entireURL+'?client_id=' + client_id + '&refine_1=' + refine_1 + '&q='+ q + '&expand=' + expand + '&count=' + count + '&start=' + start + '&sort=' + sort);
   console.log(entireURL);
-  request(entireURL,
-  function(error,response,body){
-      if(!error  && response.statusCode == 200){
-        var bodyItem = JSON.parse(body);
-        if(typeof(bodyItem.hits)!="undefined"){
-          var template =  prepareListTemplate(bodyItem.hits);
-          console.log(template);
-        }else{
-          console.info('No product found!');
-        }
-      }
-  });
+  return new Promise(function(resolve,reject){
+      request(entireURL,
+      function(error,response,body){
+         console.log('error',error);
+         console.log('response.statusCode',response.statusCode);
+         console.log('body',body);
+          if(!error  && response.statusCode == 200){
+            var bodyItem = JSON.parse(body);
+            var template = null;
+            if(typeof(bodyItem.hits)!="undefined"){
+              template =  prepareListTemplate(bodyItem.hits);
+            }else{
+              template = 'Product not found!';
+            }
+            resolve(template);
+          }else{
+            reject(new Error('Failed to load page, status code: ' + response.statusCode));
+          }
+      })
+  })
+  
 
 }
 //Update entity values 
@@ -320,7 +345,7 @@ const prepareListTemplate = (hits)=>{
                         {
                             "title": "Add to Cart",
                             "type": "web_url",
-                            "url": "",
+                            "url": "https://osfglobalservices26-alliance-prtnr-eu03-dw.demandware.net",
                             "messenger_extensions": true,
                             "webview_height_ratio": "tall",
                             "fallback_url": ""                        
@@ -385,7 +410,7 @@ app.use(bodyParser.json({ verify: verifyRequestSignature }));
 // Webhook setup
 app.get('/webhook', (req, res) => {
   if (req.query['hub.mode'] === 'subscribe' &&
-    req.query['hub.verify_token'] === FB_VERIFY_TOKEN) {
+    req.query['hub.verify_token'] ===  FB_VERIFY_TOKEN) {
     res.send(req.query['hub.challenge']);
   } else {
     res.sendStatus(400);
@@ -420,6 +445,7 @@ app.post('/webhook', (req, res) => {
             fbMessage(sender, 'Sorry I can only process text messages for now.')
             .catch(console.error);
           } else if (text) {
+            console.log('fb text',text);
             // We received a text message
 
             // Let's forward the message to the Wit.ai Bot Engine
@@ -449,6 +475,7 @@ app.post('/webhook', (req, res) => {
           }
         } else {
           console.log('received event', JSON.stringify(event));
+          fbMessage(event.sender.id, 'Welcome to the OSF DemanWare Store! How can i help you!');
         }
       });
     });

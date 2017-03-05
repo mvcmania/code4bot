@@ -23,6 +23,7 @@ const accessToken = (() => {
   }
   return process.argv[2];
 })();
+var searchState = false;
 const actions = {
   send(request, response) {
     const {sessionId, context, entities} = request;
@@ -34,6 +35,7 @@ const actions = {
     if(quickreplies){
         text = setQuickReplies(quickreplies,text);
     }
+
     console.log('request',JSON.stringify(request));
     console.log('response',JSON.stringify(response));
     //console.log(typeof(text)=='Object');
@@ -42,7 +44,7 @@ const actions = {
   // See https://wit.ai/docs/quickstart
   setIntentAndCategory(context){
     console.log('setIntentAndCategory',JSON.stringify(context));
-   
+
    setEntityValues(context,true);
     /*var intentContext = context;
     //intents array
@@ -63,42 +65,64 @@ const actions = {
     console.log('Product Search entity: ',JSON.stringify(entities));
     setEntityValues(context,false);
     console.log('Context Map: ',JSON.stringify(contextMap));
-    searchProductOnDemandWare();
-    
+    //var recipientId = sessions[context.sessionId].fbid;
+    //fbMessage(recipientId,'TEST message');
+    searchProductOnDemandWare()
+    .then(function(resp){
+        console.log('resp',resp);
+    })
+    .catch(function(err){
+        console.log('err',err);
+    });
+
+
   }
 };
 /**
  * Search product on demand ware open api
  * https://osfglobalservices26-alliance-prtnr-eu03-dw.demandware.net/s/SiteGenesis/dw/shop/v17_2/product_search?q=&refine_1=cgid=electronics-televisions-flat-screen&client_id=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaa&expand=images&count=10&sort=title&start=22
- * @param {*} context 
- * @param {*} reset 
+ * @param {*} context
+ * @param {*} reset
  */
-
-const searchProductOnDemandWare=()=> {
+var searchProductOnDemandWare=()=> {
   var entireURL = siteHost + siteSuffix;
   var productSearchDirectory = '/product_search';
   var q = contextMap['search-query']!="undefined" ? contextMap['search-query'] : '' ;
   var refine_1 = 'cgid=' + extractCategory();
   var expand ='images';
   var count = 10;
-  var start = 0; 
+  var start = 0;
   var sort = 'title';
-  
+
   entireURL = (entireURL+'?client_id=' + client_id + '&refine_1=' + refine_1 + '&q='+ q + '&expand=' + expand + '&count=' + count + '&start=' + start + '&sort=' + sort);
   console.log(entireURL);
-  request(entireURL,
-  function(error,response,body){
-      if(!error  && response.statusCode == 200){
-        var bodyItem = JSON.parse(body);
-        var template =  prepareListTemplate(bodyItem.hits);
-        console.log(JSON.stringify(template));
-      }
-  });
+  return new Promise(function(resolve,reject){
+      request(entireURL,
+      function(error,response,body){
+         console.log('error',error);
+         console.log('response.statusCode',response.statusCode);
+         console.log('body',body);
+          if(!error  && response.statusCode == 200){
+            var bodyItem = JSON.parse(body);
+            var template = '';
+            if(typeof(bodyItem.hits)!="undefined"){
+               template =  prepareListTemplate(bodyItem.hits);
+            }else{
+              template = 'Product not found!';
+            }
+            resolve(template);
+          }else{
+            reject(new Error('Failed to load page, status code: ' + response.statusCode));
+
+          }
+      })
+  })
+
 
 }
-//Update entity values 
+//Update entity values
 const setEntityValues =(context,reset) =>{
-  
+
   if(reset == true){
        contextMap = resetContextMap();
   }
@@ -119,7 +143,7 @@ const resetContextMap=()=>{
       };
 }
 var contextMap =  resetContextMap();
-//Extract category id 
+//Extract category id
 const extractCategory = ()=>{
   var categoryid= '';
   Object.keys(contextMap).forEach(function(key){
@@ -153,8 +177,8 @@ const setQuickReplies = (quickReplyArray,actualText) => {
     quickReplyResponse["quick_replies"]=qArray;
     return quickReplyResponse;
   }
-} 
-//Preapare facebook list template 
+}
+//Preapare facebook list template
 const prepareListTemplate = (hits)=>{
   var elementItem ={
                     "title": "",
@@ -174,9 +198,9 @@ const prepareListTemplate = (hits)=>{
                             "url": "",
                             "messenger_extensions": true,
                             "webview_height_ratio": "tall",
-                            "fallback_url": ""                        
+                            "fallback_url": ""
                         }
-                    ]                
+                    ]
                 };
 
   var listTemplate = {
@@ -189,7 +213,7 @@ const prepareListTemplate = (hits)=>{
         }
       }
   }
-  
+
   hits.forEach(function(item){
       var productHit = item ;
       var elementItem ={
@@ -207,12 +231,12 @@ const prepareListTemplate = (hits)=>{
                         {
                             "title": "Add to Cart",
                             "type": "web_url",
-                            "url": "",
+                            "url": "https://google.com",
                             "messenger_extensions": true,
                             "webview_height_ratio": "tall",
-                            "fallback_url": ""                        
+                            "fallback_url": ""
                         }
-                    ]                
+                    ]
                 };
       elementItem.title = productHit.product_name;
       elementItem.subtitle = productHit.image.title;
