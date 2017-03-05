@@ -44,12 +44,6 @@ const WIT_TOKEN = process.env.WIT_TOKEN || "WZWA3TCASGIBZINFXKYNQKEN4BNMNCEN";
 const WIT_API_URL = 'https://api.wit.ai';
 
 
-// Messenger API parameters
-const FB_PAGE_TOKEN = process.env.FB_PAGE_TOKEN;
-if (!FB_PAGE_TOKEN) { throw new Error('missing FB_PAGE_TOKEN') }
-const FB_APP_SECRET = process.env.FB_APP_SECRET;
-if (!FB_APP_SECRET) { throw new Error('missing FB_APP_SECRET') }
-
 let FB_VERIFY_TOKEN = null;
 FB_VERIFY_TOKEN = 'code4botsecret';//process.env.FB_VERIFY_TOKEN;
 /*crypto.randomBytes(8, (err, buff) => {
