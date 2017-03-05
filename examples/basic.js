@@ -73,6 +73,7 @@ const actions = {
  * @param {*} context 
  * @param {*} reset 
  */
+
 const searchProductOnDemandWare=()=> {
   var entireURL = siteHost + siteSuffix;
   var productSearchDirectory = '/product_search';
@@ -188,6 +189,7 @@ const prepareListTemplate = (hits)=>{
         }
       }
   }
+  
   hits.forEach(function(item){
       var productHit = item ;
       var elementItem ={
