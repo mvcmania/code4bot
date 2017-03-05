@@ -157,7 +157,6 @@ const actions = {
     console.log('setIntentAndCategory',JSON.stringify(context));
   
    setEntityValues(context,true);
-   
    return new Promise(function(resolve,reject){
      console.log('context',context);
       resolve(context);
@@ -189,7 +188,6 @@ const actions = {
  		.catch(function (err) {
 					console.log(err)
  		});*/
-    
   }
 };
 //***************CUSTOM METHODS STARTS *************************/

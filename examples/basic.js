@@ -35,16 +35,17 @@ const actions = {
     if(quickreplies){
         text = setQuickReplies(quickreplies,text);
     }
-   
-    console.log('request',JSON.stringify(request));
-    console.log('response',JSON.stringify(response));
+    return new Promise((resolve, reject) => {
+      console.log('User said .... '+ request.text);
+      console.log('Sending...', JSON.stringify(response));
+      return resolve();
+    });
     //console.log(typeof(text)=='Object');
   },
   // You should implement your custom actions here
   // See https://wit.ai/docs/quickstart
   setIntentAndCategory(context,entities){
-
-    //console.log('setIntentAndCategory',JSON.stringify(context));
+    console.log('setIntentAndCategory',JSON.stringify(context));
    
    setEntityValues(context,true);
    return new Promise(function(resolve,reject){
@@ -62,9 +63,13 @@ const actions = {
        setQuickReplies(intents[0].value,quickRepliesArray);
     }*/
   },
-  setGender(context,entities){
+  setGender(context){
     console.log('Set gender type : ',JSON.stringify(context));
-    console.log('Set gender type entity: ',JSON.stringify(entities));
+    setEntityValues(context,true);
+    return new Promise((resolve, reject) => {
+      return resolve(context.context);
+    });
+    
   },
   productSearch(context,entities){
     console.log('Product Search : ',JSON.stringify(context));
@@ -74,6 +79,14 @@ const actions = {
     //var recipientId = sessions[context.sessionId].fbid;
     //fbMessage(recipientId,'TEST message');
    /* searchProductOnDemandWare()
+
+    console.log('Product Search : ',JSON.stringify(context));
+    //console.log('Product Search entity: ',JSON.stringify(entities));
+    setEntityValues(context,false);
+    //console.log('Context Map: ',JSON.stringify(contextMap));
+    //var recipientId = sessions[context.sessionId].fbid;
+    //fbMessage(recipientId,'TEST message');
+    searchProductOnDemandWare()
     .then(function(resp){
         console.log('resp',resp);
     })
@@ -81,14 +94,13 @@ const actions = {
         console.log('err',err);
     });
     */
-    
   }
 };
 /**
  * Search product on demand ware open api
  * https://osfglobalservices26-alliance-prtnr-eu03-dw.demandware.net/s/SiteGenesis/dw/shop/v17_2/product_search?q=&refine_1=cgid=electronics-televisions-flat-screen&client_id=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaa&expand=images&count=10&sort=title&start=22
- * @param {*} context 
- * @param {*} reset 
+ * @param {*} context
+ * @param {*} reset
  */
 var searchProductOnDemandWare=()=> {
   var entireURL = siteHost + siteSuffix;
@@ -97,9 +109,9 @@ var searchProductOnDemandWare=()=> {
   var refine_1 = 'cgid=' + extractCategory();
   var expand ='images';
   var count = 10;
-  var start = 0; 
+  var start = 0;
   var sort = 'title';
-  
+
   entireURL = (entireURL+'?client_id=' + client_id + '&refine_1=' + refine_1 + '&q='+ q + '&expand=' + expand + '&count=' + count + '&start=' + start + '&sort=' + sort);
   console.log(entireURL);
   return new Promise(function(resolve,reject){
@@ -123,18 +135,16 @@ var searchProductOnDemandWare=()=> {
           }
       })
   })
-  
-
 }
-//Update entity values 
+//Update entity values
 const setEntityValues =(context,reset) =>{
  /* if(reset == true){
        contextMap = resetContextMap();
   }*/
    Object.keys(context.entities).forEach(function(key){
-     console.log(key);
-        //var tempKey = key.replace(/_/g,'-');
-        context.context[key] = context.entities[key][0].value;
+      console.log(key);
+      var tempKey = key.replace(/_/g,'-');
+        context.context[tempKey] = context.entities[key][0].value;
     });
 }
 const resetContextMap=()=>{
@@ -149,7 +159,7 @@ const resetContextMap=()=>{
       };
 }
 var contextMap =  resetContextMap();
-//Extract category id 
+//Extract category id
 const extractCategory = ()=>{
   var categoryid= '';
   Object.keys(contextMap).forEach(function(key){
@@ -183,8 +193,8 @@ const setQuickReplies = (quickReplyArray,actualText) => {
     quickReplyResponse["quick_replies"]=qArray;
     return quickReplyResponse;
   }
-} 
-//Preapare facebook list template 
+}
+//Preapare facebook list template
 const prepareListTemplate = (hits)=>{
   var elementItem ={
                     "title": "",
@@ -204,9 +214,9 @@ const prepareListTemplate = (hits)=>{
                             "url": "",
                             "messenger_extensions": true,
                             "webview_height_ratio": "tall",
-                            "fallback_url": ""                        
+                            "fallback_url": ""
                         }
-                    ]                
+                    ]
                 };
 
   var listTemplate = {
@@ -219,6 +229,7 @@ const prepareListTemplate = (hits)=>{
         }
       }
   }
+
   hits.forEach(function(item){
       var productHit = item ;
       var elementItem ={
@@ -239,9 +250,9 @@ const prepareListTemplate = (hits)=>{
                             "url": "https://google.com",
                             "messenger_extensions": true,
                             "webview_height_ratio": "tall",
-                            "fallback_url": ""                        
+                            "fallback_url": ""
                         }
-                    ]                
+                    ]
                 };
       elementItem.title = productHit.product_name;
       elementItem.subtitle = productHit.image.title;
