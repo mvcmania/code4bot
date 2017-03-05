@@ -35,17 +35,22 @@ const actions = {
     if(quickreplies){
         text = setQuickReplies(quickreplies,text);
     }
-
-    console.log('request',JSON.stringify(request));
-    console.log('response',JSON.stringify(response));
+    return new Promise((resolve, reject) => {
+      console.log('User said .... '+ request.text);
+      console.log('Sending...', JSON.stringify(response));
+      return resolve();
+    });
     //console.log(typeof(text)=='Object');
   },
   // You should implement your custom actions here
   // See https://wit.ai/docs/quickstart
-  setIntentAndCategory(context){
+  setIntentAndCategory(context,entities){
     console.log('setIntentAndCategory',JSON.stringify(context));
 
    setEntityValues(context,true);
+   return new Promise((resolve, reject) => {
+     return resolve(context);
+   });
     /*var intentContext = context;
     //intents array
     var intents = intentContext.entities.intent;
@@ -57,14 +62,19 @@ const actions = {
     }*/
   },
   setGender(context,entities){
+    setEntityValues(context,true);
+    return new Promise((resolve, reject) => {
+      return resolve(context.context);
+    });
     console.log('Set gender type : ',JSON.stringify(context));
     console.log('Set gender type entity: ',JSON.stringify(entities));
   },
   productSearch(context,entities){
+
     console.log('Product Search : ',JSON.stringify(context));
-    console.log('Product Search entity: ',JSON.stringify(entities));
+    //console.log('Product Search entity: ',JSON.stringify(entities));
     setEntityValues(context,false);
-    console.log('Context Map: ',JSON.stringify(contextMap));
+    //console.log('Context Map: ',JSON.stringify(contextMap));
     //var recipientId = sessions[context.sessionId].fbid;
     //fbMessage(recipientId,'TEST message');
     searchProductOnDemandWare()
@@ -122,13 +132,9 @@ var searchProductOnDemandWare=()=> {
 }
 //Update entity values
 const setEntityValues =(context,reset) =>{
-
-  if(reset == true){
-       contextMap = resetContextMap();
-  }
    Object.keys(context.entities).forEach(function(key){
-        var tempKey = key.replace(/_/g,'-');
-        contextMap[tempKey] = context.entities[key][0].value;
+        //var tempKey = key.replace(/_/g,'-');
+        context.context[key] = context.entities[key][0].value;
     });
 }
 const resetContextMap=()=>{
