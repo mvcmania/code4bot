@@ -1,12 +1,16 @@
 'use strict';
 
-const fetch = require('node-fetch');
+//const fetch = require('node-fetch');
 const request = require('request');
+
+const FB = require('../lib/fbutil');
+
 let Wit = null;
 let interactive = null;
 const client_id='aaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
 const siteHost ='https://osfglobalservices26-alliance-prtnr-eu03-dw.demandware.net';
 const siteSuffix = '/s/SiteGenesis/dw/shop/v17_2/product_search';
+
 try {
   // if running from repo
   Wit = require('../').Wit;
@@ -27,32 +31,33 @@ var searchState = false;
 const actions = {
   send(request, response) {
     const {sessionId, context, entities} = request;
-    var {text, quickreplies} = response;
-    /*console.log(response);
-    console.log('user said...', request.text);
-    console.log('sending...', JSON.stringify(response));
-    console.log(quickreplies);*/
-    if(quickreplies){
-        text = setQuickReplies(quickreplies,text);
-    }
-    return new Promise((resolve, reject) => {
+    const {text, quickreplies} = response;
+
+    return new Promise(function(resolve, reject) {
       console.log('User said .... '+ request.text);
       console.log('Sending...', JSON.stringify(response));
-      return resolve();
+        FB.initalIntents('intent').then((vals)=>{
+          console.log('results of getInitialIntents :%O',vals);
+          response.text = "Testing....";
+          return resolve();
+        }).catch((err)=>{
+          console.error("Error occured in getInitialIntents %O",err);
+          return reject();
+        });
     });
-    //console.log(typeof(text)=='Object');
   },
   // You should implement your custom actions here
   // See https://wit.ai/docs/quickstart
   setIntentAndCategory(context,entities){
 
-    console.log('setIntentAndCategory',JSON.stringify(context));
+  console.log('setIntentAndCategory',JSON.stringify(context));
 
-   setEntityValues(context,true);
-   return new Promise((resolve, reject) => {
-     return resolve(context);
-    console.log('Afte setIntentAndCategory',JSON.stringify(context));
-   });
+  //  setEntityValues(context,true);
+   
+  //  return new Promise((resolve, reject) => {
+  //    return resolve(context);
+  //    console.log('Afte setIntentAndCategory',JSON.stringify(context));
+  //  });
     /*var intentContext = context;
     //intents array
     var intents = intentContext.entities.intent;
@@ -250,5 +255,6 @@ const prepareListTemplate = (hits)=>{
   });
   return listTemplate;
 }
+
 const client = new Wit({accessToken, actions});
 interactive(client);
