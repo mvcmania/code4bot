@@ -155,8 +155,11 @@ const actions = {
   // See https://wit.ai/docs/quickstart
   setIntentAndCategory(context){
     console.log('setIntentAndCategory',JSON.stringify(context));
-   
+  
    setEntityValues(context,true);
+   return new Promise(function(resolve,reject){
+      resolve(context);
+   })
     /*var intentContext = context;
     //intents array
     var intents = intentContext.entities.intent;
@@ -174,8 +177,7 @@ const actions = {
   productSearch(context,entities){
     searchState = true;
     console.log('Product Search : ',JSON.stringify(context));
-    console.log('Product Search entity: ',JSON.stringify(entities));
-    setEntityValues(context,false);
+    /*setEntityValues(context,false);
     console.log('Context Map: ',JSON.stringify(contextMap));
     var recipientId = sessions[context.sessionId].fbid;
     searchProductOnDemandWare()
@@ -189,8 +191,7 @@ const actions = {
        searchState = false;
        console.log('err',err);
 					console.log(err)
- 		});
-    
+ 		}); 
   }
 };
 //***************CUSTOM METHODS STARTS *************************/
@@ -238,12 +239,12 @@ var searchProductOnDemandWare=()=> {
 //Update entity values 
 const setEntityValues =(context,reset) =>{
   
-  if(reset == true){
+ /* if(reset == true){
        contextMap = resetContextMap();
-  }
+  }*/
    Object.keys(context.entities).forEach(function(key){
         var tempKey = key.replace(/_/g,'-');
-        contextMap[tempKey] = context.entities[key][0].value;
+        context[tempKey] = context.entities[key][0].value;
     });
 }
 const resetContextMap=()=>{

@@ -45,11 +45,13 @@ const actions = {
   // You should implement your custom actions here
   // See https://wit.ai/docs/quickstart
   setIntentAndCategory(context,entities){
+
     console.log('setIntentAndCategory',JSON.stringify(context));
 
    setEntityValues(context,true);
    return new Promise((resolve, reject) => {
      return resolve(context);
+    console.log('Afte setIntentAndCategory',JSON.stringify(context));
    });
     /*var intentContext = context;
     //intents array
@@ -84,8 +86,6 @@ const actions = {
     .catch(function(err){
         console.log('err',err);
     });
-
-
   }
 };
 /**
@@ -123,15 +123,13 @@ var searchProductOnDemandWare=()=> {
             resolve(template);
           }else{
             reject(new Error('Failed to load page, status code: ' + response.statusCode));
-
           }
       })
   })
-
-
 }
 //Update entity values
 const setEntityValues =(context,reset) =>{
+
    Object.keys(context.entities).forEach(function(key){
         //var tempKey = key.replace(/_/g,'-');
         context.context[key] = context.entities[key][0].value;
