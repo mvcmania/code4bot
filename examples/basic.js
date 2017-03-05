@@ -44,12 +44,13 @@ const actions = {
   // See https://wit.ai/docs/quickstart
   setIntentAndCategory(context,entities){
 
-    console.log('setIntentAndCategory',JSON.stringify(context));
+    //console.log('setIntentAndCategory',JSON.stringify(context));
    
    setEntityValues(context,true);
-   console.log('Afte setIntentAndCategory',JSON.stringify(context));
    return new Promise(function(resolve,reject){
-      return resolve(context);
+      console.log('context',context.context);
+      console.log('context type',typeof(context));
+      return resolve(context.context);
    });
     /*var intentContext = context;
     //intents array
@@ -127,13 +128,13 @@ var searchProductOnDemandWare=()=> {
 }
 //Update entity values 
 const setEntityValues =(context,reset) =>{
-  if(reset == true){
+ /* if(reset == true){
        contextMap = resetContextMap();
-  }
+  }*/
    Object.keys(context.entities).forEach(function(key){
      console.log(key);
-        var tempKey = key.replace(/_/g,'-');
-        context[tempKey] = context.entities[key][0].value;
+        //var tempKey = key.replace(/_/g,'-');
+        context.context[key] = context.entities[key][0].value;
     });
 }
 const resetContextMap=()=>{
