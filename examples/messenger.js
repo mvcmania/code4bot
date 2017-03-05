@@ -14,13 +14,13 @@
 // 6. Talk to your bot on Messenger!
 
 const bodyParser = require('body-parser');
-const crypto = require('crypto');
 const express = require('express');
-const fetch = require('node-fetch');
 const request = require('request');
 const client_id='aaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
-const siteHost ='https://osfglobalservices26-alliance-prtnr-eu03-dw.demandware.net';
-const siteSuffix = '/s/SiteGenesis/dw/shop/v17_2/product_search';
+
+const dmw = require('../lib/dmware'); 
+const FB = require('../lib/fbutil');
+
 //const request = require('request');
 
 let Wit = null;
@@ -57,35 +57,6 @@ FB_VERIFY_TOKEN = 'code4botsecret';//process.env.FB_VERIFY_TOKEN;
   FB_VERIFY_TOKEN = buff.toString('hex');
   console.log(`/webhook will accept the Verify Token "${FB_VERIFY_TOKEN}"`);
 });*/
-
-// ----------------------------------------------------------------------------
-// Messenger API specific code
-
-// See the Send API reference
-// https://developers.facebook.com/docs/messenger-platform/send-api-reference
-
-const fbMessage = (id, text) => {
-  const body = JSON.stringify({
-    recipient: { id },
-    message: (typeof(text)=='object' ? text : { text }),
-  });
-  console.log('FB Message Body');
-  console.log(body);
-  const qs = 'access_token=' + encodeURIComponent(FB_PAGE_TOKEN);
-  return fetch('https://graph.facebook.com/me/messages?' + qs, {
-    method: 'POST',
-    headers: {'Content-Type': 'application/json'},
-    body,
-  })
-  .then(rsp => rsp.json())
-  .then(json => {
-    if (json.error && json.error.message) {
-      throw new Error(json.error.message);
-    }
-    return json;
-  });
-};
-
 // ----------------------------------------------------------------------------
 // Wit.ai bot specific code
 
@@ -133,18 +104,17 @@ const actions = {
       if(quickreplies){
          text = setQuickReplies(quickreplies,text);
       }
-      
-        console.log(text);
-        return fbMessage(recipientId, text)
-        .then(() => null)
-        .catch((err) => {
-          console.error(
-            'Oops! An error occurred while forwarding the response to',
-            recipientId,
-            ':',
-            err.stack || err
-          );
-        });
+      console.log(text);
+      return FB.fbMessage(recipientId, text)
+      .then(() => null)
+      .catch((err) => {
+        console.error(
+          'Oops! An error occurred while forwarding the response to',
+          recipientId,
+          ':',
+          err.stack || err
+        );
+      });
     } else {
       console.error('Oops! Couldn\'t find user for session:', sessionId);
       // Giving the wheel back to our bot
@@ -177,71 +147,36 @@ const actions = {
   productSearch(context,entities){
     searchState = true;
     console.log('Product Search : ',JSON.stringify(context));
-    /*setEntityValues(context,false);
+      var params ={
+        client_id : client_id,
+        refine_1 : "cgid=" + extractCategory(),
+        q : 'dress',
+        expand : "images",
+        count : 10,
+        start : 0,
+        sort : "title"
+    }; 
+    setEntityValues(context,false);
     console.log('Context Map: ',JSON.stringify(contextMap));
     var recipientId = sessions[context.sessionId].fbid;
-    searchProductOnDemandWare()
-    .then(function (fbResponse) {
+    dmw.searchProducts(params)
+      .then(function (fbResponse){
+          searchState = false;
+          console.log('recipientId',recipientId);
+          console.log('fbResponse',fbResponse);
+          FB.fbMessage(recipientId,fbResponse);
+      })
+      .catch(function (err) {
         searchState = false;
-        console.log('recipientId',recipientId);
-        console.log('fbResponse',fbResponse);
-	 			fbMessage(recipientId,fbResponse);
-		})
- 		.catch(function (err) {
-       searchState = false;
-       console.log('err',err);
-					console.log(err)
- 		}); 
-  */
+        console.log('err',err);
+        console.log(err)
+      }); 
   }
 };
 //***************CUSTOM METHODS STARTS *************************/
-/**
- * Search product on demand ware open api
- * https://osfglobalservices26-alliance-prtnr-eu03-dw.demandware.net/s/SiteGenesis/dw/shop/v17_2/product_search?q=&refine_1=cgid=electronics-televisions-flat-screen&client_id=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaa&expand=images&count=10&sort=title&start=22
- * @param {*} context 
- * @param {*} reset 
- */
-var searchProductOnDemandWare=()=> {
-  var entireURL = siteHost + siteSuffix;
-  var productSearchDirectory = '/product_search';
-  var q = contextMap['search-query']!="undefined" ? contextMap['search-query'] : '' ;
-  var refine_1 = 'cgid=' + extractCategory();
-  var expand ='images';
-  var count = 10;
-  var start = 0; 
-  var sort = 'title';
-  
-  entireURL = (entireURL+'?client_id=' + client_id + '&refine_1=' + refine_1 + '&q='+ q + '&expand=' + expand + '&count=' + count + '&start=' + start + '&sort=' + sort);
-  console.log(entireURL);
-  return new Promise(function(resolve,reject){
-      request(entireURL,
-      function(error,response,body){
-         console.log('error',error);
-         console.log('response.statusCode',response.statusCode);
-         console.log('body',body);
-          if(!error  && response.statusCode == 200){
-            var bodyItem = JSON.parse(body);
-            var template = null;
-            if(typeof(bodyItem.hits)!="undefined"){
-              template =  prepareListTemplate(bodyItem.hits);
-            }else{
-              template = 'Product not found!';
-            }
-            resolve(template);
-          }else{
-            reject(new Error('Failed to load page, status code: ' + response.statusCode));
-          }
-      })
-  });
 
-}
 //Update entity values 
 const setEntityValues =(context,reset) =>{
-  
- /* if(reset == true){
-       contextMap = resetContextMap();
-  }*/
    Object.keys(context.entities).forEach(function(key){
         var tempKey = key.replace(/_/g,'-');
         context[tempKey] = context.entities[key][0].value;
@@ -294,102 +229,6 @@ const setQuickReplies = (quickReplyArray,actualText) => {
     return quickReplyResponse;
   }
 }
-//Preapare facebook list template 
-const prepareListTemplate = (hits)=>{
-  var elementItem ={
-                    "title": "",
-                    "image_url": "",
-                    "subtitle": "",
-                    "default_action": {
-                        "type": "web_url",
-                        "url": "",
-                        "messenger_extensions": true,
-                        "webview_height_ratio": "tall",
-                        "fallback_url": ""
-                    },
-                    "buttons": [
-                        {
-                            "title": "",
-                            "type": "web_url",
-                            "url": "",
-                            "messenger_extensions": true,
-                            "webview_height_ratio": "tall",
-                            "fallback_url": ""                        
-                        }
-                    ]                
-                };
-
-  var listTemplate = {
-      "attachment": {
-        "type": "template",
-        "payload": {
-            "template_type": "list",
-            "top_element_style": "compact",
-            "elements": []
-        }
-      }
-  }
-  hits.forEach(function(item){
-      var productHit = item ;
-      var elementItem ={
-                    "title": "",
-                    "image_url": "",
-                    "subtitle": "",
-                    "default_action": {
-                        "type": "web_url",
-                        "url": "",
-                        "messenger_extensions": true,
-                        "webview_height_ratio": "tall",
-                        "fallback_url": ""
-                    },
-                    "buttons": [
-                        {
-                            "title": "Add to Cart",
-                            "type": "web_url",
-                            "url": "https://osfglobalservices26-alliance-prtnr-eu03-dw.demandware.net",
-                            "messenger_extensions": true,
-                            "webview_height_ratio": "tall",
-                            "fallback_url": ""                        
-                        }
-                    ]                
-                };
-      elementItem.title = productHit.product_name;
-      elementItem.subtitle = productHit.image.title;
-      elementItem.image_url = productHit.image.link.replace(/\/large\//g,'/small/');
-      elementItem.default_action.url = productHit.link;
-      listTemplate.attachment.payload.elements.push(elementItem);
-  });
-  return listTemplate;
-}
-//Get the date with leading zero 
-//eg. 03012017
-const getLeadingZeroDate = () => {
-  var dateObj = new Date();
-  var month = dateObj.getUTCMonth() + 1; //months from 1-12
-  var day = dateObj.getUTCDate();
-  var year = dateObj.getUTCFullYear();
-  return year + (month < 10 ? '0' + month : month ) + (day < 10 ? '0' +day : day);
-}
-//----------------------------------------------------------------------
-//To be able to fetch entity metadata info
-// See the Wit.ai API reference 
-//https://wit.ai/docs/http/20160526#get--entities-:entity-id-link
-const getEntityMetadata = (entityId,callback) =>{
-  if(entityId){
-    var apiUrl = WIT_API_URL + '/entities/' + entityId;
-    var qs = 'v='+getLeadingZeroDate();   
-    var options = {
-        url     : apiUrl + '?'+ qs,
-        headers : {
-                  'Authorization': 'Bearer '+WIT_TOKEN
-                  }
-    };
-    request(options,callback); 
-  }else{
-    return {};
-  }
-  
-};
 //***************CUSTOM METHODS END *************************/
 // Setting up our bot
 const wit = new Wit({
@@ -406,7 +245,7 @@ app.use(({method, url}, rsp, next) => {
   });
   next();
 });
-app.use(bodyParser.json({ verify: verifyRequestSignature }));
+app.use(bodyParser.json({ verify: FB.verifyRequestSignature }));
 
 // Webhook setup
 app.get('/webhook', (req, res) => {
@@ -439,11 +278,11 @@ app.post('/webhook', (req, res) => {
 
           // We retrieve the message content
           const {text, attachments} = event.message;
-
+        
           if (attachments) {
             // We received an attachment
             // Let's reply with an automatic message
-            fbMessage(sender, 'Sorry I can only process text messages for now.')
+            FB.fbMessage(sender, 'Sorry I can only process text messages for now.')
             .catch(console.error);
           } else if (text) {
             console.log('fb text',text);
@@ -466,7 +305,6 @@ app.post('/webhook', (req, res) => {
               // if (context['done']) {
               //   delete sessions[sessionId];
               // }
-
               // Updating the user's current session state
               sessions[sessionId].context = context;
             })
@@ -476,43 +314,13 @@ app.post('/webhook', (req, res) => {
           }
         } else {
           console.log('received event', JSON.stringify(event));
-          fbMessage(event.sender.id, 'Welcome to the OSF DemanWare Store! How can i help you!');
+          FB.fbMessage(event.sender.id, 'Welcome to the OSF DemanWare Store! How can i help you!');
         }
       });
     });
   }
   res.sendStatus(200);
 });
-
-/*
- * Verify that the callback came from Facebook. Using the App Secret from
- * the App Dashboard, we can verify the signature that is sent with each
- * callback in the x-hub-signature field, located in the header.
- *
- * https://developers.facebook.com/docs/graph-api/webhooks#setup
- *
- */
-function verifyRequestSignature(req, res, buf) {
-  var signature = req.headers["x-hub-signature"];
-
-  if (!signature) {
-    // For testing, let's log an error. In production, you should throw an
-    // error.
-    console.error("Couldn't validate the signature.");
-  } else {
-    var elements = signature.split('=');
-    var method = elements[0];
-    var signatureHash = elements[1];
-
-    var expectedHash = crypto.createHmac('sha1', FB_APP_SECRET)
-                        .update(buf)
-                        .digest('hex');
-
-    if (signatureHash != expectedHash) {
-      throw new Error("Couldn't validate the request signature.");
-    }
-  }
-}
 
 app.listen(PORT);
 console.log('Listening on :' + PORT + '...');

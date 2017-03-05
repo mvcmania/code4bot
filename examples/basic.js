@@ -38,7 +38,6 @@ const actions = {
       console.log('Sending...', JSON.stringify(response));
         FB.initalIntents('intent').then((vals)=>{
           console.log('results of getInitialIntents :%O',vals);
-          response.text = "Testing....";
           return resolve();
         }).catch((err)=>{
           console.error("Error occured in getInitialIntents %O",err);
