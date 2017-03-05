@@ -38,7 +38,7 @@ try {
 const PORT = process.env.PORT || 8445;
 
 // Wit.ai parameters
-const WIT_TOKEN = process.env.WIT_TOKEN;
+const WIT_TOKEN = process.env.WIT_TOKEN || "WZWA3TCASGIBZINFXKYNQKEN4BNMNCEN";
 
 //Wit api url 
 const WIT_API_URL = 'https://api.wit.ai';
@@ -225,8 +225,7 @@ var searchProductOnDemandWare=()=> {
             reject(new Error('Failed to load page, status code: ' + response.statusCode));
           }
       })
-  })
-  
+  });
 
 }
 //Update entity values 
@@ -377,7 +376,7 @@ const getEntityMetadata = (entityId,callback) =>{
                   'Authorization': 'Bearer '+WIT_TOKEN
                   }
     };
-    //request(options,callback); 
+    request(options,callback); 
   }else{
     return {};
   }
