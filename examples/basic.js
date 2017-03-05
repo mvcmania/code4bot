@@ -30,7 +30,6 @@ const actions = {
   send(request, response) {
     const {sessionId, context, entities} = request;
     const {text, quickreplies} = response;
-    
     console.log(response);
     if(quickreplies){
       FB.setQuickReplies(quickreplies,text);
