@@ -18,7 +18,7 @@ const express = require('express');
 const request = require('request');
 const client_id='aaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
 
-const dmw = require('../lib/dw'); 
+const DW = require('../lib/dw');
 const FB = require('../lib/fbutil');
 
 //const request = require('request');
@@ -115,12 +115,26 @@ const actions = {
       return Promise.resolve()
     }
   },
-  merge(context,entities){
-    console.log('Set gender type : ',JSON.stringify(context));
-    console.log('Set gender type entity: ',JSON.stringify(entities));
-  },
-  productSearch(context,entities){
+  merge(context){
     
+    console.log('in merge',context);
+    
+    return new Promise(function(resolve, reject) {
+      setEntityValues(context,false);
+      console.log('context in merge',context.context);
+      resolve(context.context);
+    });
+  },
+  productSearch(context){
+    console.log('in product Search',context);
+    console.log('context in product Search',context.context); 
+    DW.searchProductOnDemandWare(context.context)
+    .then(function(resp){
+        var recipientId = sessions[context.sessionId].fbid;
+        Fb.fbMessage(recipientId,resp);
+    }).catch(function(err){
+      console.log('error while retriving products',err);
+    });
   }
 };
 
