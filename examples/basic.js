@@ -42,7 +42,7 @@ const actions = {
     console.log('in merge',context);
     
     return new Promise(function(resolve, reject) {
-      setEntityValues(context,false);
+      DW.setEntityValues(context,false);
       console.log('context in merge',context.context);
       resolve(context.context);
     });
@@ -54,22 +54,29 @@ const actions = {
   } 
 };
 
-//Update entity values
-const setEntityValues =(context,reset) =>{
-   
-   if(reset)
-   context.context = {};
-
-   Object.keys(context.entities).forEach(function(key){
-        context.context[key] = context.entities[key][0].value;
-    });
-    //set no query if search_query is not existing,
-    if(!context.context.hasOwnProperty('search_query')){
-        context.context["no_query"] =  true;
-    }else if(context.context.no_query){
-        delete context.context.no_query;  
-    }
-
-}
 const client = new Wit({accessToken, actions});
+var callbackToken = function(error,response,body){
+    if(!error && response.statusCode == 200){
+       process.env['JWT_TOKEN'] = response.headers['authorization'];
+       console.log('JWT_TOKEN =',process.env.JWT_TOKEN);
+       createBasket(callBackBasketCreate);
+    }else{
+      console.log('Error while retriving token ', body);
+    }
+}
+var callBackBasketCreate = function (error,response,body) {
+    if(!error && response.statusCode == 200){
+       var bodyItem = JSON.parse(body);
+       process.env.BASKET_ID = bodyItem.basket_id; 
+       console.log('BASKET ID =', process.env.BASKET_ID);
+    }else{
+      console.log('Error while creating basket ', body);
+    }
+}
+const cbForToken =(()=>{
+      DW.getJWTToken(callbackToken);
+})();
+const createBasket =(callBackBasketCreate)=>{
+      DW.createBasket(callBackBasketCreate);
+}
 interactive(client);

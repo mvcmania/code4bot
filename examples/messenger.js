@@ -20,7 +20,6 @@ const client_id='aaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
 
 const DW = require('../lib/dw');
 const FB = require('../lib/fbutil');
-
 //const request = require('request');
 
 let Wit = null;
@@ -120,7 +119,7 @@ const actions = {
     console.log('in merge',context);
     
     return new Promise(function(resolve, reject) {
-      setEntityValues(context,false);
+      DW.setEntityValues(context,false);
       console.log('context in merge',context.context);
       resolve(context.context);
     });
@@ -138,23 +137,6 @@ const actions = {
   }
 };
 
-//Update entity values
-const setEntityValues =(context,reset) =>{
-   
-   if(reset)
-   context.context = {};
-
-   Object.keys(context.entities).forEach(function(key){
-        context.context[key] = context.entities[key][0].value;
-    });
-    //set no query if search_query is not existing,
-    if(!context.context.hasOwnProperty('search_query')){
-        context.context["no_query"] =  true;
-    }else if(context.context.no_query){
-        delete context.context.no_query;  
-    }
-
-}
 //***************CUSTOM METHODS END *************************/
 // Setting up our bot
 const wit = new Wit({
@@ -191,8 +173,10 @@ app.post('/webhook', (req, res) => {
   const data = req.body;
 
   if (data.object === 'page') {
+     console.log(req.body);
     data.entry.forEach(entry => {
       entry.messaging.forEach(event => {
+         console.log('event',event);
         if (event.message && !event.message.is_echo) {
           // Yay! We got a new message!
           // We retrieve the Facebook user ID of the sender
@@ -238,15 +222,57 @@ app.post('/webhook', (req, res) => {
               console.error('Oops! Got an error from Wit: ', err.stack || err);
             })
           }
-        } else {
+        } else if(event.postback  && event.postback.payload ){
           console.log('received event', JSON.stringify(event));
-          FB.fbMessage(event.sender.id, 'Welcome to the OSF DemanWare Store! How can i help you!');
+            if(event.postback.payload == 'FACEBOOK_WELCOME'){
+                  DW.retrieveCustomObjectValue('BotSettings',1)
+                  .then(function(resp){
+                      FB.fbMessage(event.sender.id, resp.c_WelcomeMessage);
+                  }).catch(function(err){
+                      console.log('Error while retriving welcome message',err);
+                      FB.fbMessage(event.sender.id, 'Welcome to the OSF DemanWare Store! How can i help you!');
+                  });
+                  DW.createBasket(callBackBasketCreate);
+            }else{
+                var  payLoadObject = JSON.parse(event.postback.payload.replace(/'/g,'\"'));
+
+                if(payLoadObject.action=='ADDTOCART'){
+                  
+                  DW.addToBasket(payLoadObject.product_id,payLoadObject.quantity)
+                  .then(function(resp){
+                      FB.fbMessage(event.sender.id,FB.prepareViewBasket);
+                  }).catch(function(exp){
+                      console.log(exp);
+                  })
+                }
+            }
+            
+           
         }
       });
     });
   }
   res.sendStatus(200);
 });
-
+var callbackToken = function(error,response,body){
+    if(!error && response.statusCode == 200){
+       process.env['JWT_TOKEN'] = response.headers['authorization'];
+       console.log('JWT_TOKEN =',process.env.JWT_TOKEN);
+    }else{
+      console.log('Error while retriving token ', body);
+    }
+}
+var callBackBasketCreate = function (error,response,body) {
+    if(!error && response.statusCode == 200){
+       var bodyItem = JSON.parse(body);
+       process.env.BASKET_ID = bodyItem.basket_id; 
+       console.log('BASKET ID =', process.env.BASKET_ID);
+    }else{
+      console.log('Error while creating basket ', body);
+    }
+}
+const cbForToken =(()=>{
+      DW.getJWTToken(callbackToken);
+})();
 app.listen(PORT);
 console.log('Listening on :' + PORT + '...');
