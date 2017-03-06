@@ -232,7 +232,13 @@ app.post('/webhook', (req, res) => {
                       console.log('Error while retriving welcome message',err);
                       FB.fbMessage(event.sender.id, 'Welcome to the OSF DemanWare Store! How can i help you!');
                   });
-                  DW.createBasket(callBackBasketCreate);
+                  DW.createBasket()
+                  .then((res)=>{
+                      process.env.BASKET_ID = res.basket_id; 
+                      console.log('BASKET ID =', process.env.BASKET_ID);
+                  }).catch((err)=>{
+                      console.log('error while creating basket',err);
+                  });
             }else{
                 var  payLoadObject = JSON.parse(event.postback.payload.replace(/'/g,'\"'));
 
@@ -260,15 +266,6 @@ var callbackToken = function(error,response,body){
        console.log('JWT_TOKEN =',process.env.JWT_TOKEN);
     }else{
       console.log('Error while retriving token ', body);
-    }
-}
-var callBackBasketCreate = function (error,response,body) {
-    if(!error && response.statusCode == 200){
-       var bodyItem = JSON.parse(body);
-       process.env.BASKET_ID = bodyItem.basket_id; 
-       console.log('BASKET ID =', process.env.BASKET_ID);
-    }else{
-      console.log('Error while creating basket ', body);
     }
 }
 const cbForToken =(()=>{
