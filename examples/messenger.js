@@ -95,7 +95,7 @@ const actions = {
       // We return a promise to let our bot know when we're done sending
       //text ='<a href="">abc</a>';
       if(quickreplies){
-         text = setQuickReplies(quickreplies,text);
+         text = FB.setQuickReplies(quickreplies,text);
       }
       console.log(text);
       return FB.fbMessage(recipientId, text)
@@ -232,24 +232,24 @@ app.post('/webhook', (req, res) => {
                       console.log('Error while retriving welcome message',err);
                       FB.fbMessage(event.sender.id, 'Welcome to the OSF DemanWare Store! How can i help you!');
                   });
-                  DW.createBasket()
-                  .then((res)=>{
-                      process.env.BASKET_ID = res.basket_id; 
-                      console.log('BASKET ID =', process.env.BASKET_ID);
-                  }).catch((err)=>{
-                      console.log('error while creating basket',err);
-                  });
+                 
             }else{
                 var  payLoadObject = JSON.parse(event.postback.payload.replace(/'/g,'\"'));
 
                 if(payLoadObject.action=='ADDTOCART'){
-                  
-                  DW.addToBasket(payLoadObject.product_id,payLoadObject.quantity)
-                  .then(function(resp){
-                      FB.fbMessage(event.sender.id,FB.prepareViewBasket);
-                  }).catch(function(exp){
-                      console.log(exp);
-                  })
+                     DW.createBasket()
+                    .then((res)=>{
+                        process.env.BASKET_ID = res.basket_id; 
+                        console.log('BASKET ID =', process.env.BASKET_ID);
+                        DW.addToBasket(payLoadObject.product_id,payLoadObject.quantity)
+                        .then(function(resp){
+                            FB.fbMessage(event.sender.id,FB.prepareViewBasket);
+                        }).catch(function(exp){
+                            console.log(exp);
+                        });
+                    }).catch((err)=>{
+                        console.log('error while creating basket',err);
+                    });
                 }
             }
             
