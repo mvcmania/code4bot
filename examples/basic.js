@@ -74,7 +74,7 @@ var callBackBasketCreate = function (error,response,body) {
     }
 }
 const cbForToken =(()=>{
-      DW.getJWTToken(callbackToken);
+      //DW.getJWTToken(callbackToken);
 })();
 const createBasket =(callBackBasketCreate)=>{
       DW.createBasket(callBackBasketCreate);
