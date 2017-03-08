@@ -58,7 +58,7 @@ FB_VERIFY_TOKEN = 'code4botsecret';//process.env.FB_VERIFY_TOKEN;
 // sessionId -> {fbid: facebookUserId, context: sessionState}
 const sessions = {};
 
-const findOrCreateSession = (fbid) => {
+const findOrCreateSession = (fbid,resetContext) => {
   let sessionId;
   // Let's see if we already have a session for the user fbid
   Object.keys(sessions).forEach(k => {
@@ -71,6 +71,11 @@ const findOrCreateSession = (fbid) => {
     // No session found for user fbid, let's create a new one
     sessionId = new Date().toISOString();
     sessions[sessionId] = {fbid: fbid, context: {}};
+  }
+  if(resetContext){
+    sessions[sessionId].context ={};
+    process.env.BASKET_ID == undefined;
+    process.env.JWT_TOKEN == undefined;
   }
   return sessionId;
 };
@@ -116,12 +121,12 @@ const actions = {
   },
   merge(context){
     
-    console.log('in merge',context);
+    console.log('in merge %O',context);
     
     return new Promise(function(resolve, reject) {
       DW.setEntityValues(context,false);
       console.log('context in merge',context.context);
-      resolve(context.context);
+      return resolve(context.context);
     });
   },
   productSearch(context){
@@ -184,7 +189,7 @@ app.post('/webhook', (req, res) => {
 
           // We retrieve the user's current session, or create one if it doesn't exist
           // This is needed for our bot to figure out the conversation history
-          const sessionId = findOrCreateSession(sender);
+          const sessionId = findOrCreateSession(sender,false);
 
           // We retrieve the message content
           const {text, attachments} = event.message;
@@ -196,6 +201,7 @@ app.post('/webhook', (req, res) => {
             .catch(console.error);
           } else if (text) {
             console.log('fb text',text);
+             console.log('sessions[sessionId].context',sessions[sessionId].context);
             // We received a text message
 
             // Let's forward the message to the Wit.ai Bot Engine
@@ -224,7 +230,11 @@ app.post('/webhook', (req, res) => {
           }
         } else if(event.postback  && event.postback.payload ){
           console.log('received event', JSON.stringify(event));
+
             if(event.postback.payload == 'FACEBOOK_WELCOME'){
+
+                  //Delete current user context if it is existed 
+                  findOrCreateSession(event.sender.id,true);
                   DW.retrieveCustomObjectValue('BotSettings',1)
                   .then(function(resp){
                       FB.fbMessage(event.sender.id, resp.c_WelcomeMessage);
@@ -232,28 +242,39 @@ app.post('/webhook', (req, res) => {
                       console.log('Error while retriving welcome message',err);
                       FB.fbMessage(event.sender.id, 'Welcome to the OSF DemanWare Store! How can i help you!');
                   });
+                  //GEt auth token for each user
+                  DW.getJWTToken(callbackToken);
                  
             }else{
                 var  payLoadObject = JSON.parse(event.postback.payload.replace(/'/g,'\"'));
+                console.log('BASKET ID',process.env.BASKET_ID);
 
                 if(payLoadObject.action=='ADDTOCART'){
-                     DW.createBasket()
-                    .then((res)=>{
-                        process.env.BASKET_ID = res.basket_id; 
-                        console.log('BASKET ID =', process.env.BASKET_ID);
-                        DW.addToBasket(payLoadObject.product_id,payLoadObject.quantity)
-                        .then(function(resp){
-                            FB.fbMessage(event.sender.id,FB.prepareViewBasket);
-                        }).catch(function(exp){
-                            console.log(exp);
+                     if(typeof(process.env.BASKET_ID)=="undefined"){
+                        DW.createBasket()
+                        .then((res)=>{
+                            process.env.BASKET_ID = res.basket_id; 
+                            console.log('BASKET ID =', process.env.BASKET_ID);
+                            DW.addToBasket(payLoadObject.product_id,payLoadObject.quantity)
+                            .then(function(resp){
+                                FB.fbMessage(event.sender.id,FB.prepareViewBasket());
+                            }).catch(function(exp){
+                                console.log(exp);
+                            });
+                        }).catch((err)=>{
+                            console.log('error while creating basket',err);
                         });
-                    }).catch((err)=>{
-                        console.log('error while creating basket',err);
-                    });
+                     }else{
+                          DW.addToBasket(payLoadObject.product_id,payLoadObject.quantity)
+                            .then(function(resp){
+                                FB.fbMessage(event.sender.id,FB.prepareViewBasket());
+                            }).catch(function(exp){
+                                console.log(exp);
+                            });
+                     }
+                    
                 }
             }
-            
-           
         }
       });
     });
@@ -263,13 +284,27 @@ app.post('/webhook', (req, res) => {
 var callbackToken = function(error,response,body){
     if(!error && response.statusCode == 200){
        process.env['JWT_TOKEN'] = response.headers['authorization'];
-       console.log('JWT_TOKEN =',process.env.JWT_TOKEN);
+       console.log('JWT TOKEN HAS BEEN GENERATED SUCCESSFULLY',response.headers['authorization']);
+       DW.sessionBridge(callbackTokenSessionBridge);
     }else{
-      console.log('Error while retriving token ', body);
+      console.log('Error while generating jwt token ', body);
     }
 }
-const cbForToken =(()=>{
-      DW.getJWTToken(callbackToken);
-})();
+var callbackTokenSessionBridge = function(error,response,body){
+    if(!error && response.statusCode == 200){
+       console.log('SESSION BRIDGE HAS BEEN COMPLETED');
+    }else if(error){
+      console.log('Error while bridging on sessions ', response);
+      console.log('Error while bridging on sessions ', error);
+    }
+}
+
+//handle session bridge 
+app.get('/session',(req,res)=>{
+    console.log('BASKETID'+process.env.BASKET_ID);
+    console.log('JWT_TOKEN'+process.env.JWT_TOKEN);
+    DW.sessionBridge(callbackTokenSessionBridge);
+    res.sendStatus(200);
+});
 app.listen(PORT);
 console.log('Listening on :' + PORT + '...');
